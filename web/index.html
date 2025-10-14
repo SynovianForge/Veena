@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synovian 3D Chat</title>
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- Import map for clean imports -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three.module.js",
+      "three/examples/jsm/loaders/GLTFLoader.js": "./libs/GLTFLoader.js",
+      "@pixiv/three-vrm": "./libs/three-vrm.module.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Response text on left -->
+    <div id="responseContainer">
+      <div id="responseText">Hello there! How can I help you today?</div>
+    </div>
+
+    <!-- 3D avatar -->
+    <canvas id="avatarCanvas"></canvas>
+
+    <!-- Chat input bar -->
+    <div id="chatOverlay">
+      <div id="chatInputContainer">
+        <input id="userInput" type="text" placeholder="Type a message..." />
+        <button id="micBtn">🎙️</button>
+        <button id="sendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+  <script type="module" src="./avatar.js"></script>
+</body>
+</html>

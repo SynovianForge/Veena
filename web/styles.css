@@ -1,0 +1,104 @@
+/* --- Global --- */
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+  font-family: "Inter", system-ui, sans-serif;
+  color: #222;
+}
+
+/* --- Two-column stage --- */
+#app {
+  display: grid;
+  grid-template-columns: 32% 68%;  /* left (text) / right (avatar) */
+  grid-template-rows: 1fr;         /* full height row */
+  align-items: center;              /* vertical center both columns */
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Left: response text (yellow area in your sketch) */
+#responseContainer {
+  grid-column: 1;
+  justify-self: center;            /* center within left column */
+  width: 88%;
+  max-width: 720px;
+  line-height: 1.6;
+}
+#responseText { white-space: pre-line; }
+
+/* Right: avatar canvas (red area) */
+#avatarCanvas {
+  grid-column: 2;
+  justify-self: center;            /* center within right column */
+  width: 94%;                      /* fill its column without hugging the edge */
+  height: 86vh;                    /* tall, but not full height */
+  background: transparent;
+}
+
+/* Bottom input bar (green) */
+#chatOverlay {
+  position: absolute;
+  bottom: 4%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;            /* so clicks pass through except inputs */
+}
+#chatInputContainer {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  width: min(70vw, 820px);
+  background: #f3f3f3;
+  border-radius: 40px;
+  padding: 10px 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.08);
+  transition: opacity .3s ease, transform .3s ease;
+}
+#chatInputContainer.hidden { opacity: 0; transform: translateY(10px); }
+
+#chatInputContainer input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 1.05rem;
+  padding: 10px;
+  color: #222;
+}
+#chatInputContainer button {
+  border: 0;
+  background: #e0e0e0;
+  border-radius: 50%;
+  width: 44px; height: 44px;
+  font-size: 1.1rem;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+#chatInputContainer button:hover { background: #d6d6d6; transform: scale(1.05); }
+
+/* Mobile: stack, keep avatar semi-transparent behind text */
+@media (max-width: 900px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 55% 45%;
+    align-items: start;
+  }
+  #responseContainer {
+    grid-column: 1; grid-row: 2;
+    width: 90%;
+    margin: 0 auto;
+  }
+  #avatarCanvas {
+    grid-column: 1; grid-row: 1;
+    justify-self: center;
+    width: 100%;
+    height: 60vh;
+    opacity: .55;
+  }
+  #chatInputContainer { width: 90vw; }
+}

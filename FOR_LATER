@@ -1,0 +1,208 @@
+MASTER RECORD — Memory System (What we built)
+Files & roles
+
+utils/logger.py
+Centralized append-only logging for:
+
+chat_log.txt — human-readable rolling transcript (all sessions, appended).
+
+chat_log.json — structured log of sessions [ { timestamp, messages, summary } ].
+
+session_summaries.txt — appended structured summaries per session.
+
+utils/memory.py
+
+Conversation helpers: init_history, add_message, trim_history.
+
+Retrieval (initial JSON-based + “bare-bones” summaries-based):
+
+load_memory() — reads chat_logs/chat_log.json to list of sessions.
+
+retrieve_from_memory(query, section=None, limit=3)
+Current “bare-bones” version reads session_summaries.txt, finds substring matches, returns short excerpts.
+
+controller.py
+
+Executes Orchestrator’s planned steps.
+
+Logging hooks:
+
+_send_to_main_chat() calls append_txt(history) after each model reply → keeps chat_log.txt fresh.
+
+finalize_session(history) (called on exit/quit) generates a structured summary with summary_bot, appends it to:
+
+session_summaries.txt
+
+chat_log.json via append_json_with_summary(history, summary_text)
+
+Memory actions (when enabled):
+
+_query_memory(details) → uses utils.memory.retrieve_from_memory and stores last result in self.last_memory so _send_to_main_chat() can inject it into the main bot’s prompt.
+
+_update_memory(details) → minimal key/value store in self.memory[section] = data (placeholder for future persistence).
+
+orchestrator.py
+
+Strict JSON-only planner with regex cleaning for safety:
+
+SYSTEM_PROMPT enforces: first char {, last }, no prose, always end with a communication step.
+
+plan(user_input):
+
+Calls Gemini (temperature=0) → extracts JSON block → json.loads or falls back to clarify_context.
+
+Supported actions in the schema (all planned, not executed here):
+
+send_to_main_chat, query_memory, update_memory, summarize_session, web_search, analyze_data, generate_plan, clarify_context, run_code, idle.
+
+main.py
+
+Wires everything.
+
+Critical order: add user input to history before calling Orchestrator → Controller.
+
+On exit: controller.finalize_session(history) → writes summaries + JSON.
+
+Exact data formats
+history (in-memory during a run)
+[
+  {"role": "user",  "parts": ["...user text..."]},
+  {"role": "model", "parts": ["...model reply..."]},
+  ...
+]
+
+chat_logs/chat_log.json
+[
+  {
+    "timestamp": "[YYYY-MM-DD HH:MM:SS]",
+    "messages": [
+      {"role": "user", "parts": ["Hi"]},
+      {"role": "model", "parts": ["Hello!"]}
+    ],
+    "summary": "🕒 Session Timestamp: ...\n🧩 Session Context:\n• ..."
+  },
+  ...
+]
+
+chat_logs/chat_log.txt
+=== Session Start [YYYY-MM-DD HH:MM:SS] ===
+
+User: ...
+Model: ...
+
+=== Session End ===
+
+chat_logs/session_summaries.txt
+=== Summary (YYYY-MM-DD HH:MM:SS) ===
+🕒 Session Timestamp: ...
+🧩 Session Context:
+• ...
+✅ Actions Taken:
+• ...
+...
+----------------------------------------------------------------------
+
+Functions — Full inventory & behavior
+utils/logger.py
+
+timestamp() → "[YYYY-MM-DD HH:MM:SS]"
+
+append_txt(history)
+Appends one entire session to chat_log.txt (called repeatedly from _send_to_main_chat() so transcript stays fresh; also fine to run again at end).
+
+append_json(history)
+Appends a session without summary (not used after we added end-of-session summarization).
+
+append_json_with_summary(history, summary_text)
+Appends { timestamp, messages, summary } to chat_log.json. Creates file if absent.
+
+_append_to_json_file(session_data)
+Private helper; loads existing JSON array, appends, writes back.
+
+utils/memory.py
+
+init_history(), add_message(history, role, text), trim_history(history, max_turns)
+
+load_memory() → returns list from chat_log.json (or [] if missing/invalid).
+
+retrieve_from_memory(query, section=None, limit=3) — current bare-bones version:
+
+Reads session_summaries.txt.
+
+Finds query occurrences, returns up to limit excerpts with ±200 chars context.
+
+Returns [{"timestamp": None, "match": "..."}] with No matching memory if none found.
+
+(Earlier, we also had a JSON-based search version that scanned chat_log.json text blobs; we replaced it with the ultra-reliable summaries-only search at your request.)
+
+controller.py
+
+execute_plan(plan, history, user_input="")
+
+Guards plan end: if no final communication step, auto-append a send_to_main_chat.
+
+Dispatches each step:
+
+send_to_main_chat → _send_to_main_chat(details, history, user_input)
+
+summarize_session → _summarize_session(details, history)
+
+query_memory → _query_memory(details)
+
+update_memory → _update_memory(details)
+
+web_search → _web_search(details) (placeholder string)
+
+clarify_context / idle → short strings
+
+_send_to_main_chat(details, history, user_input)
+
+Important fix: Sends the actual user_input (not just the orchestrator’s topic string) + optional self.last_memory if present.
+
+Prompts the main bot for a 1–3 sentence reply; logs with append_txt.
+
+_summarize_session(details, history)
+
+Summarizes history using summary_bot with scope+format.
+
+_query_memory(details)
+
+Calls retrieve_from_memory(query, section) and stores a copy of the joined matches in self.last_memory so _send_to_main_chat can include it.
+
+_update_memory(details)
+
+In-memory dict update: self.memory[section] = data (placeholder for future persistence).
+
+_web_search(details)
+
+Placeholder string for future integration.
+
+finalize_session(history)
+
+Builds a structured summary using summary_bot.
+
+Appends to session_summaries.txt.
+
+Calls append_json_with_summary(history, summary_text) to update chat_log.json.
+
+orchestrator.py
+
+Strict JSON planner with cleaning:
+
+SYSTEM_PROMPT: action schema + Output Policy (no prose, {…} only, final communication step required).
+
+plan(user_input):
+
+generate_content with temperature: 0 (optionally random_seed: 0).
+
+Cleans code fences, extracts first {...} block, parses to dict.
+
+Fallback → clarify_context if parse fails.
+
+
+
+
+
+Things that are for later:
+1. Memory thingy.
+2. Web search.
